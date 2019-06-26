@@ -3,8 +3,8 @@ using System.Collections;
 //using UnityEngine.Networking;
 
 //[RequireComponent(typeof(NetworkIdentity))]
-//public class BasicController2 : NetworkBehaviour {
-public class BasicController2 : MonoBehaviour {
+//public class BasicController : NetworkBehaviour {
+public class BasicController : MonoBehaviour {
 
 	[HideInInspector] public Vector3 cursorPos = Vector3.zero;
 	[HideInInspector] public Vector3 lastHitPos = Vector3.one;
