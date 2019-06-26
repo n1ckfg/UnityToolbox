@@ -4,257 +4,243 @@ using System.Collections;
 
 //[RequireComponent(typeof(NetworkIdentity))]
 //public class BasicController : NetworkBehaviour {
-public class BasicController : MonoBehaviour {
+public class BasicController : MonoBehaviour
+{
 
-	[HideInInspector] public Vector3 cursorPos = Vector3.zero;
-	[HideInInspector] public Vector3 lastHitPos = Vector3.one;
-	
-	private float zPos = 1f;
-	private bool fixedZ = false;
+    private bool isMobile = false;
 
-	private void Awake() {
-		if (rb == null) rb = GetComponent<Rigidbody>();
-	}
+    private void Awake() {
+#if (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+		isMobile = true;
+#endif
+    }
 
-	private void Start() {
-		//if (!isLocalPlayer) return;
+    private void Start() {
+        //if (!isLocalPlayer) return;
+        if (useKeyboard) wasdStart();
+        if (useMouse) mouseStart();
+    }
 
-		currentSpeed = walkSpeed;
-        Cursor.visible = showCursor;
-		if (useTouch) Input.multiTouchEnabled = true;
-		if (useMouse && rb != null) rb.freezeRotation = true;
+    private void Update() {
+        //if (!isLocalPlayer) return;
+        if (!fixedZ) zPos = lastHitPos.z;
 
-		collisionStart();
-	}
-
-	private void Update() {
-		//if (!isLocalPlayer) return;
-
-		if (useKeyboard) wasdUpdate();
-
-		if (useMouse) mouseUpdate();
-		if (useButton) mouseButtonUpdate();
-		if (useTouch) touchUpdate();	
-
-		if (useRaycaster) rayUpdate();	
-	}
+        if (useKeyboard) wasdUpdate();
+        if (useMouse) mouseUpdate();
+        if (useRaycaster) rayUpdate();
+    }
 
     // ~ ~ ~ ~ ~ ~ ~ ~ 
 
-    [Header("Keyboard")] 
+    [Header("Keyboard")]
     public bool useKeyboard = true;
     public bool useYAxis = false;
     public string yAxisName = "Vertical2";
-	public float walkSpeed = 10f;
-	public float runSpeed = 100f;
-	public float accel = 0.01f;
-	public Transform homePoint;
+    public float walkSpeed = 10f;
+    public float runSpeed = 100f;
+    public float accel = 0.01f;
+    public Transform homePoint;
 
-	private float currentSpeed;
-	private Vector3 pos = Vector3.zero;
-	private bool run = false;
-	
-	private void wasdUpdate() {
-		if (Input.GetKeyDown(KeyCode.LeftShift)) {
-			run = true;
-		} else if (Input.GetKeyUp(KeyCode.LeftShift)) {
-			run = false;
-		}
+    private float currentSpeed;
+    private Vector3 p = Vector3.zero;
+    private bool run = false;
 
-		if (run && currentSpeed < runSpeed) {
-			currentSpeed += accel;
-			if (currentSpeed > runSpeed) currentSpeed = runSpeed;
-		} else if (!run && currentSpeed > walkSpeed) {
-			currentSpeed -= accel;
-			if (currentSpeed < walkSpeed) currentSpeed = walkSpeed;
-		}
+    private void wasdStart() {
+        currentSpeed = walkSpeed;
+    }
 
-		pos.x = Input.GetAxis("Horizontal") * Time.deltaTime * currentSpeed;
+    private void wasdUpdate() {
+        if (Input.GetKeyDown(KeyCode.LeftShift)) {
+            run = true;
+        } else if (Input.GetKeyUp(KeyCode.LeftShift)) {
+            run = false;
+        }
+
+        if (run && currentSpeed < runSpeed) {
+            currentSpeed += accel;
+            if (currentSpeed > runSpeed) currentSpeed = runSpeed;
+        } else if (!run && currentSpeed > walkSpeed) {
+            currentSpeed -= accel;
+            if (currentSpeed < walkSpeed) currentSpeed = walkSpeed;
+        }
+
+        p.x = Input.GetAxis("Horizontal") * Time.deltaTime * currentSpeed;
         if (useYAxis) {
-			pos.y = Input.GetAxis(yAxisName) * Time.deltaTime * currentSpeed;
+            p.y = Input.GetAxis(yAxisName) * Time.deltaTime * currentSpeed;
+        } else {
+            p.y = 0f;
         }
-        else {
-			pos.y = 0f;
+        p.z = Input.GetAxis("Vertical") * Time.deltaTime * currentSpeed;
+
+        transform.Translate(p.x, p.y, p.z);
+
+        if (homePoint != null && Input.GetKeyDown(KeyCode.Home)) {
+            transform.position = homePoint.position;
+            transform.rotation = homePoint.rotation;
+            transform.localScale = homePoint.localScale;
         }
-		pos.z = Input.GetAxis("Vertical") * Time.deltaTime * currentSpeed;
+    }
 
-		transform.Translate(pos);
+    // ~ ~ ~ ~ ~ ~ ~ ~ 
 
-		if (homePoint != null && Input.GetKeyDown(KeyCode.Home)){
-			transform.position = homePoint.position;
-			transform.rotation = homePoint.rotation;
-			transform.localScale = homePoint.localScale;
-		}
-	}
-
-	// ~ ~ ~ ~ ~ ~ ~ ~ 
-
-	public enum RotationAxes { MouseXAndY, MouseX, MouseY, NONE };
+    public enum RotationAxes { MouseXAndY, MouseX, MouseY, NONE };
     [Header("Mouse")]
     public bool useMouse = true;
-	public bool useButton = true;
-	public bool showCursor = false;
-	public RotationAxes axes = RotationAxes.MouseXAndY;
-	public float sensitivityX = 2f;
-	public float sensitivityY = 2f;
+    public bool showCursor = false;
+    public bool useButton = true;
+    public RotationAxes axes = RotationAxes.MouseXAndY;
+    public float sensitivityX = 2f;
+    public float sensitivityY = 2f;
 
-	[HideInInspector] public bool mouseDown = false;
-	[HideInInspector] public bool mousePressed = false;
-	[HideInInspector] public bool mouseUp = false;
+    [HideInInspector] public Vector3 mousePos = Vector3.zero;
 
-	private float minimumX = -360f;
-	private float maximumX = 360f;
-	private float minimumY = -60f;
-	private float maximumY = 60f;
-	private float rotationY = 0f;
+    [HideInInspector] public bool mouseDown = false;
+    [HideInInspector] public bool mousePressed = false;
+    [HideInInspector] public bool mouseUp = false;
 
-	private void mouseUpdate() {
-		if (axes == RotationAxes.MouseXAndY) {
-			float rotationX = transform.localEulerAngles.y + Input.GetAxis("Mouse X") * sensitivityX;
+    [HideInInspector] public bool mouseRDown = false;
+    [HideInInspector] public bool mouseRPressed = false;
+    [HideInInspector] public bool mouseRUp = false;
 
-			rotationY += Input.GetAxis("Mouse Y") * sensitivityY;
-			rotationY = Mathf.Clamp(rotationY, minimumY, maximumY);
+    [HideInInspector] public bool mouseMDown = false;
+    [HideInInspector] public bool mouseMPressed = false;
+    [HideInInspector] public bool mouseMUp = false;
 
-			transform.localEulerAngles = new Vector3(-rotationY, rotationX, 0f);
-		} else if (axes == RotationAxes.MouseX) {
-			transform.Rotate(0f, Input.GetAxis("Mouse X") * sensitivityX, 0f);
-		} else if (axes == RotationAxes.MouseY) {
-			rotationY += Input.GetAxis("Mouse Y") * sensitivityY;
-			rotationY = Mathf.Clamp(rotationY, minimumY, maximumY);
+    [HideInInspector] public int touchCount = 0;
 
-			transform.localEulerAngles = new Vector3(-rotationY, transform.localEulerAngles.y, 0f);
-		}
+    private bool fixedZ = false;
+    //private float minimumX = -360f;
+    //private float maximumX = 360f;
+    private float minimumY = -60f;
+    private float maximumY = 60f;
+    private float zPos = 1f;
+    private float rotationY = 0f;
 
-		// ~ ~ ~
-	}
+    private void mouseStart() {
+        Cursor.visible = showCursor;
+        if (GetComponent<Rigidbody>()) GetComponent<Rigidbody>().freezeRotation = true;
+    }
 
-	private void mouseButtonUpdate() { 
-		mouseDown = false;
-		mouseUp = false;
+    private void mouseUpdate() {
+        if (axes == RotationAxes.MouseXAndY) {
+            float rotationX = transform.localEulerAngles.y + Input.GetAxis("Mouse X") * sensitivityX;
 
-		if (useButton) {
-			if (Input.GetMouseButtonDown(0) && GUIUtility.hotControl == 0) {
-				mouseDown = true;
-				mousePressed = true;
-			}
+            rotationY += Input.GetAxis("Mouse Y") * sensitivityY;
+            rotationY = Mathf.Clamp(rotationY, minimumY, maximumY);
 
-			if (Input.GetMouseButton(0) && GUIUtility.hotControl == 0) {
-				if (!fixedZ) zPos = lastHitPos.z;
-				cursorPos = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, zPos));
-			}
+            transform.localEulerAngles = new Vector3(-rotationY, rotationX, 0f);
+        } else if (axes == RotationAxes.MouseX) {
+            transform.Rotate(0f, Input.GetAxis("Mouse X") * sensitivityX, 0f);
+        } else if (axes == RotationAxes.MouseY) {
+            rotationY += Input.GetAxis("Mouse Y") * sensitivityY;
+            rotationY = Mathf.Clamp(rotationY, minimumY, maximumY);
 
-			if (Input.GetMouseButtonUp(0)) {
-				mousePressed = false;
-				mouseUp = true;
-			}
-		}
-	}
+            transform.localEulerAngles = new Vector3(-rotationY, transform.localEulerAngles.y, 0f);
+        }
 
-	// ~ ~ ~ ~ ~ ~ ~ ~ 
+        // ~ ~ ~
 
-	[Header("Touch")]
-	public bool useTouch = false;
+        mouseDown = false;
+        mouseUp = false;
+        mouseRDown = false;
+        mouseRUp = false;
+        mouseMDown = false;
+        mouseMUp = false;
 
-	[HideInInspector] public bool touchPressed = false;
-	[HideInInspector] public bool touchDown = false;
-	[HideInInspector] public bool touchUp = false;
-	[HideInInspector] public int touchCount = 0;
+        if (useButton && GUIUtility.hotControl == 0) {
+            if (Input.GetMouseButtonDown(0)) {
+                mouseDown = true;
+                mousePressed = true;
+            } else if (Input.GetMouseButtonUp(0)) {
+                mousePressed = false;
+                mouseUp = true;
+            }
 
-	void touchUpdate() {
-		touchDown = false;
-		touchUp = false;
-		touchCount = Input.touchCount;
+            if (isMobile) {
+                touchCount = Input.touchCount;
 
-		if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began && GUIUtility.hotControl == 0) {
-			touchPressed = true;
-			touchDown = true;
-		} else if (Input.touchCount < 1 || (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Ended) && GUIUtility.hotControl == 0) {
-			touchPressed = false;
-			touchUp = true;
-		}
+                if (touchCount == 2 && Input.GetTouch(1).phase == TouchPhase.Began) {
+                    mouseRDown = true;
+                    mouseRPressed = true;
+                } else if (touchCount == 2 && Input.GetTouch(1).phase == TouchPhase.Ended) {
+                    mouseRPressed = false;
+                    mouseRUp = true;
+                }
 
-		if (touchPressed) {
-			if (!fixedZ) zPos = lastHitPos.z;
+                if (touchCount >= 3 && Input.GetTouch(2).phase == TouchPhase.Began) {
+                    mouseMDown = true;
+                    mouseMPressed = true;
+                } else if (touchCount >= 3 && Input.GetTouch(2).phase == TouchPhase.Ended) {
+                    mouseMPressed = false;
+                    mouseMUp = true;
+                }
+            } else {
+                if (Input.GetMouseButtonDown(1)) {
+                    mouseRDown = true;
+                    mouseRPressed = true;
+                } else if (Input.GetMouseButtonUp(1)) {
+                    mouseRPressed = false;
+                    mouseRUp = true;
+                }
 
-			if (!useMouse && touchCount == 1) {
-				Vector2 singlePos = Input.GetTouch(0).position;
-				cursorPos = Camera.main.ScreenToWorldPoint(new Vector3(singlePos.x, singlePos.y, zPos));
-			} else if (touchCount > 1) {
-				Vector2 avgPos = Vector2.zero;
+                if (Input.GetMouseButtonDown(2)) {
+                    mouseMDown = true;
+                    mouseMPressed = true;
+                } else if (Input.GetMouseButtonUp(2)) {
+                    mouseMPressed = false;
+                    mouseMUp = true;
+                }
+            }
 
-				for (int i = 0; i < touchCount; i++) {
-					avgPos += Input.GetTouch(i).position;
-				}
+            if ((mousePressed || mouseRPressed || mouseMPressed)) {
+                if (isMobile && touchCount > 1) {
+                    Vector2 avgPos = Vector2.zero;
 
-				avgPos /= (float)touchCount;
-				Debug.Log(avgPos + " " + touchCount);
+                    for (int i = 0; i < touchCount; i++) {
+                        avgPos += Input.GetTouch(i).position;
+                    }
 
-				cursorPos = Camera.main.ScreenToWorldPoint(new Vector3(avgPos.x, avgPos.y, zPos));
-			}
-		}
-	}
+                    avgPos /= (float)touchCount;
 
-	// ~ ~ ~ ~ ~ ~ ~ ~ 
+                    mousePos = Camera.main.ScreenToWorldPoint(new Vector3(avgPos.x, avgPos.y, zPos));
+                } else {
+                    mousePos = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, zPos));
+                }
+            }
+        }
+    }
 
-	[Header("Raycaster")]
-	public bool useRaycaster = true;
-	public bool followCursor = true;
-	public bool debugRaycaster = false;
+    // ~ ~ ~ ~ ~ ~ ~ ~ 
 
-	[HideInInspector] public bool isLooking = false;
-	[HideInInspector] public string isLookingAt = "";
+    [Header("Raycaster")]
+    public bool useRaycaster = true;
+    public bool followMouse = true;
+
+    [HideInInspector] public bool isLooking = false;
+    [HideInInspector] public string isLookingAt = "";
     [HideInInspector] public Collider isLookingCol;
+    [HideInInspector] public Vector3 lastHitPos = Vector3.one;
 
-	private float debugDrawTime = 0.3f;
-	private float debugRayScale = 100f;
+    void rayUpdate() {
+        RaycastHit hit;
+        Ray ray;
 
-	void rayUpdate() {
-		RaycastHit hit;
-		Ray ray;
+        if (followMouse) {
+            ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        } else {
+            ray = new Ray(transform.position, transform.forward);
+        }
 
-		if (followCursor) {
-			ray = Camera.main.ScreenPointToRay(new Vector2(cursorPos.x, cursorPos.y));
-		} else {
-			ray = new Ray(transform.position, transform.forward);
-		}
-
-		if (Physics.Raycast(ray, out hit)) {
-			isLooking = true;
-			isLookingAt = hit.collider.name;
+        if (Physics.Raycast(ray, out hit)) {
+            isLooking = true;
+            isLookingAt = hit.collider.name;
             isLookingCol = hit.collider;
 
-			lastHitPos = hit.point;
-		} else {
-			isLooking = false;
-			isLookingAt = "";
-		}
-
-		if (debugRaycaster) {
-			if (followCursor) {
-				Debug.DrawRay(Camera.main.ScreenToWorldPoint(cursorPos), transform.forward * debugRayScale, Color.red, debugDrawTime, false);
-			} else {
-				Debug.DrawRay(transform.position, transform.forward * debugRayScale, Color.red, debugDrawTime, false);
-			}
-			Debug.Log("isLooking: " + isLooking + " isLookingAt: " + isLookingAt + " lastHitPos: " + lastHitPos);
-		}
-	}
-
-	// ~ ~ ~ ~ ~ ~ ~ ~ 
-
-	[Header("Collisions")]
-	public bool useCollisions = false;
-	public Rigidbody rb;
-
-	private void collisionStart() {
-		if (rb != null) {
-			if (useCollisions) {
-				rb.useGravity = true;
-				rb.constraints = RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezeRotation;
-			} else {
-				rb.useGravity = false;
-				rb.constraints = RigidbodyConstraints.FreezePosition | RigidbodyConstraints.FreezeRotation;
-			}
-		}
-	}
+            lastHitPos = hit.point;
+        } else {
+            isLooking = false;
+            isLookingAt = "";
+        }
+    }
 
 }
