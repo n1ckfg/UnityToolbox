@@ -12,7 +12,8 @@ public class ParticleRaycaster : MonoBehaviour {
 
 	void Start() {
 		if (!ps) ps = GetComponent<ParticleSystem> ();
-		ps.simulationSpace = ParticleSystemSimulationSpace.World;
+        var main = ps.main;
+		main.simulationSpace = ParticleSystemSimulationSpace.World;
 	}
 	
 	void Update() {

@@ -67,13 +67,13 @@ public class MecanimControl : MonoBehaviour{
 		}
 
 		//Switch weapon state
-		if (layer2CurrentState.nameHash != reloadState || currentBaseState.nameHash != switchWeaponState){
+		if (layer2CurrentState.fullPathHash != reloadState || currentBaseState.fullPathHash != switchWeaponState){
 			if(Input.GetButtonUp("Fire2")){
 				anim.SetBool("SwitchWeapon", true);
 			}
 		}
 
-		if (layer2CurrentState.nameHash == switchWeaponState){
+		if (layer2CurrentState.fullPathHash == switchWeaponState){
 			anim.SetBool("SwitchWeapon", false);
 		}
 	}

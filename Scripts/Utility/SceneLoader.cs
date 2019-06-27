@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.SceneManagement;
 
 public class SceneLoader : MonoBehaviour {
 
@@ -12,8 +13,7 @@ public class SceneLoader : MonoBehaviour {
 
 	IEnumerator Start() {
 		if (!preventActivation) {
-			async = Application.LoadLevelAsync(levelName);
-			//async.allowSceneActivation = false;
+			async = SceneManager.LoadSceneAsync(levelName);
 			async.allowSceneActivation = autoActivate;
 		}
 

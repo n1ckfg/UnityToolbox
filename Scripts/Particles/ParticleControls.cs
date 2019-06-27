@@ -3,7 +3,7 @@ using System.Collections;
 
 public class ParticleControls : MonoBehaviour {
 
-	private ParticleSystem particles;
+	private ParticleSystem ps;
 	private AnimatorVel animatorVel;
 
 	public float scaler = 1.0f;
@@ -14,12 +14,14 @@ public class ParticleControls : MonoBehaviour {
 	}
 
 	void Start() {
-		particles = (ParticleSystem) GetComponent("ParticleSystem");
+		ps = (ParticleSystem) GetComponent("ParticleSystem");
 	}
 	
 	void Update () {
-		particles.startSpeed = animatorVel.vel * scaler;
-		particles.startSize = animatorVel.vel * scaler / 10.0f;
-		particles.emissionRate = animatorVel.vel * scaler * 10.0f;
+        var main = ps.main;
+        var em = ps.emission;
+		main.startSpeed = animatorVel.vel * scaler;
+		main.startSize = animatorVel.vel * scaler / 10.0f;
+		em.rateOverTime = animatorVel.vel * scaler * 10.0f;
 	}
 }
