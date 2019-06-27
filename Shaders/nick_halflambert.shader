@@ -1,6 +1,7 @@
 ﻿Shader "Nick/HalfLambert" {
 	
 	Properties {
+        _Color ("Color", Color) = (1,1,1,1)
 		_MainTex ("Base (RGB)", 2D) = "white" {}
 	}
 	
@@ -25,7 +26,8 @@
 			return c;
 		}
 		// ~ ~ ~ ~ ~ 
-		
+
+        half4 _Color;
 		sampler2D _MainTex;
 
 		struct Input {
@@ -33,7 +35,7 @@
 		};
 
 		void surf(Input IN, inout SurfaceOutput o) {
-			half4 c = tex2D (_MainTex, IN.uv_MainTex);
+			half4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;
 			o.Albedo = c.rgb;
 			o.Alpha = c.a;
 		}

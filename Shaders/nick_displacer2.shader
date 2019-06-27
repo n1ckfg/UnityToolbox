@@ -1,4 +1,4 @@
-Shader "Nick/Displacer"{
+Shader "Nick/Displacer2"{
     
     Properties{
         _MainTex ("Texture", 2D) = "white" {}
