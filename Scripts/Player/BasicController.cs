@@ -16,6 +16,7 @@ public class BasicController : MonoBehaviour
     }
 
     private void Start() {
+        Cursor.visible = showCursor;
         //if (!isLocalPlayer) return;
         if (useKeyboard) wasdStart();
         if (useMouse) mouseStart();
@@ -117,7 +118,6 @@ public class BasicController : MonoBehaviour
     private float rotationY = 0f;
 
     private void mouseStart() {
-        Cursor.visible = showCursor;
         if (GetComponent<Rigidbody>()) GetComponent<Rigidbody>().freezeRotation = true;
     }
 
